@@ -48,7 +48,19 @@ class BTSolver:
                 The bool is true if assignment is consistent, false otherwise.
     """
     def forwardChecking ( self ):
-        return ({},False)
+        updatedVars = {}
+        for box in self.network.variables:
+            if box.isAssigned():
+                currInt = box.getAssignment()
+                for neighbor in self.network.getNeighborsOfVariable(box):
+                    if not neighbor.isAssigned() and neighbor.getDomain().contains(currInt):
+                        self.trail.push(neighbor)
+                        neighbor.removeValueFromDomain(currInt)
+                        updatedVars[neighbor] = neighbor.getDomain()
+
+                        if neighbor.getDomain().isEmpty():
+                            return (updatedVars, False)
+        return (updatedVars, True)
 
     # =================================================================
 	# Arc Consistency
@@ -117,7 +129,16 @@ class BTSolver:
         Return: The unassigned variable with the smallest domain
     """
     def getMRV ( self ):
-        return None
+        bestMove = None
+        minSize = float('inf')
+
+        for box in self.network.variables:
+            if not box.isAssigned():
+                if box.size() < minSize:
+                    minSize = box.size()
+                    bestMove = box
+
+        return bestMove
 
     """
         Part 2 TODO: Implement the Minimum Remaining Value Heuristic
