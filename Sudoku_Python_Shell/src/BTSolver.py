@@ -50,16 +50,17 @@ class BTSolver:
     def forwardChecking ( self ):
         updatedVars = {}
         for box in self.network.variables:
-            if box.isAssigned():
-                currInt = box.getAssignment()
-                for neighbor in self.network.getNeighborsOfVariable(box):
-                    if not neighbor.isAssigned() and neighbor.getDomain().contains(currInt):
-                        self.trail.push(neighbor)
-                        neighbor.removeValueFromDomain(currInt)
-                        updatedVars[neighbor] = neighbor.getDomain()
+            if not box.isAssigned():
+                continue
+            currInt = box.getAssignment()
+            for neighbor in self.network.getNeighborsOfVariable(box):
+                if not neighbor.isAssigned() and neighbor.getDomain().contains(currInt):
+                    self.trail.push(neighbor)
+                    neighbor.removeValueFromDomain(currInt)
+                    updatedVars[neighbor] = neighbor.getDomain()
 
-                        if neighbor.getDomain().isEmpty():
-                            return (updatedVars, False)
+                    if neighbor.getDomain().isEmpty():
+                        return (updatedVars, False)
         return (updatedVars, True)
 
     # =================================================================
@@ -179,15 +180,16 @@ class BTSolver:
                 The LCV is first and the MCV is last
     """
     def getValuesLCVOrder ( self, v ):
-        valCounts = []
+        values = []
         for val in v.domain.values:
             count = 0
             for neighbor in self.network.getNeighborsOfVariable(v):
                 if not neighbor.isAssigned() and neighbor.getDomain().contains(val):
                     count += 1
-            valCounts.append((val, count))
-        valCounts.sort(key=lambda x: x[1])
-        return [val for val, count in valCounts]
+            values.append((val, count))
+        values.sort(key=lambda x: x[1])
+        return [val for val, count in values]
+        # return None
 
     """
          Optional TODO: Implement your own advanced Value Heuristic
