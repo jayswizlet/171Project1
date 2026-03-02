@@ -150,7 +150,30 @@ class BTSolver:
                 If there is only one variable, return the list of size 1 containing that variable.
     """
     def MRVwithTieBreaker ( self ):
-        return None
+        best_vars = []
+        min_size = float('inf')
+        max_degree = -1
+
+        for box in self.network.variables:
+            if not box.isAssigned():
+                curr_size = box.size()
+                curr_degree = 0
+                for neighbor in self.network.getNeighborsOfVariable(box):
+                    if not neighbor.isAssigned():
+                        curr_degree += 1
+
+                if curr_size < min_size:
+                    min_size = curr_size
+                    max_degree = curr_degree
+                    best_vars = [box]
+                elif curr_size == min_size:
+                    if curr_degree > max_degree:
+                        max_degree = curr_degree
+                        best_vars = [box]
+                    elif curr_degree == max_degree:
+                        best_vars.append(box)
+
+        return best_vars
 
     """
          Optional TODO: Implement your own advanced Variable Heuristic
