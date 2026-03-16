@@ -100,60 +100,58 @@ class BTSolver:
                 The bool is true if assignment is consistent, false otherwise.
     """
     def norvigCheck ( self ):
-        assignedVars = {}
+    assignedVars = {}
 
-        changed = True
-        while changed:
-            changed = False
+    changed = True
+    while changed:
+        changed = False
 
-            # remove assigned values from neighbors' domains
-            for var in self.network.variables:
-                if not var.isAssigned():
-                    continue
+        for var in self.network.variables:
+            if var.isAssigned():
+                val = var.getAssignment()
 
-                assignedVal = var.getAssignment()
-                neighbors = self.network.getNeighborsOfVariable(var)
+                for neighbor in self.network.getNeighborsOfVariable(var):
+                    if not neighbor.isAssigned():
+                        if neighbor.getDomain().contains(val):
+                            self.trail.push(neighbor)
+                            neighbor.removeValueFromDomain(val)
 
-                for neighbor in neighbors:
-                    if neighbor.isAssigned():
-                        continue
+                            if neighbor.getDomain().isEmpty():
+                                return (assignedVars, False)
 
-                    if neighbor.getDomain().contains(assignedVal):
-                        self.trail.push(neighbor)
-                        neighbor.removeValueFromDomain(assignedVal)
+                            if neighbor.getDomain().size() == 1:
+                                onlyVal = neighbor.getDomain().values[0]
+                                self.trail.push(neighbor)
+                                neighbor.assignValue(onlyVal)
+                                assignedVars[neighbor] = onlyVal
+                                changed = True
+        for constraint in self.network.getConstraints():
+            for val in range(1, self.gameboard.p * self.gameboard.q + 1):
+                possible = []
+                countAssigned = 0
 
-                        if neighbor.getDomain().isEmpty():
-                            return (assignedVars, False)
+                for v in constraint.vars:
+                    if v.isAssigned():
+                        if v.getAssignment() == val:
+                            countAssigned += 1
+                    else:
+                        if v.getDomain().contains(val):
+                            possible.append(v)
 
-            # check each constraint for forced assignments
-            for constraint in self.network.getConstraints():
-                maxVal = self.gameboard.p * self.gameboard.q
+                if countAssigned > 1:
+                    return (assignedVars, False)
 
-                for val in range(1, maxVal + 1):
-                    possibleVars = []
+                if countAssigned == 0 and len(possible) == 0:
+                    return (assignedVars, False)
 
-                    for v in constraint.vars:
-                        if not v.isAssigned() and v.getDomain().contains(val):
-                            possibleVars.append(v)
+                if countAssigned == 0 and len(possible) == 1:
+                    onlyVar = possible[0]
+                    self.trail.push(onlyVar)
+                    onlyVar.assignValue(val)
+                    assignedVars[onlyVar] = val
+                    changed = True
 
-                    alreadyAssigned = False
-                    for v in constraint.vars:
-                        if v.isAssigned() and v.getAssignment() == val:
-                            alreadyAssigned = True
-                            break
-
-                    if len(possibleVars) == 0:
-                        if not alreadyAssigned:
-                            return (assignedVars, False)
-
-                    elif len(possibleVars) == 1:
-                        onlyVar = possibleVars[0]
-                        self.trail.push(onlyVar)
-                        onlyVar.assignValue(val)
-                        assignedVars[onlyVar] = val
-                        changed = True
-
-        return (assignedVars, True)
+    return (assignedVars, True)
 
     """
          Optional TODO: Implement your own advanced Constraint Propagation
