@@ -106,33 +106,51 @@ class BTSolver:
         while changed:
             changed = False
 
-            # Heuristic 1: Elimination
-            # For every assigned variable, remove its value from unassigned neighbors
+            # remove assigned values from neighbors' domains
             for var in self.network.variables:
                 if not var.isAssigned():
                     continue
-                val = var.getAssignment()
-                for neighbor in self.network.getNeighborsOfVariable(var):
-                    if not neighbor.isAssigned() and neighbor.getDomain().contains(val):
+
+                assignedVal = var.getAssignment()
+                neighbors = self.network.getNeighborsOfVariable(var)
+
+                for neighbor in neighbors:
+                    if neighbor.isAssigned():
+                        continue
+
+                    if neighbor.getDomain().contains(assignedVal):
                         self.trail.push(neighbor)
-                        neighbor.removeValueFromDomain(val)
+                        neighbor.removeValueFromDomain(assignedVal)
+
                         if neighbor.getDomain().isEmpty():
                             return (assignedVars, False)
 
-            # Heuristic 2: Only choice
-            # For each constraint, if a value can only go in one cell, assign it
+            # check each constraint for forced assignments
             for constraint in self.network.getConstraints():
-                for val in range(1, self.gameboard.p * self.gameboard.q + 1):
-                    possible = [v for v in constraint.vars
-                                if not v.isAssigned() and v.getDomain().contains(val)]
-                    if len(possible) == 0:
-                        if not any(v.isAssigned() and v.getAssignment() == val for v in constraint.vars):
+                maxVal = self.gameboard.p * self.gameboard.q
+
+                for val in range(1, maxVal + 1):
+                    possibleVars = []
+
+                    for v in constraint.vars:
+                        if not v.isAssigned() and v.getDomain().contains(val):
+                            possibleVars.append(v)
+
+                    alreadyAssigned = False
+                    for v in constraint.vars:
+                        if v.isAssigned() and v.getAssignment() == val:
+                            alreadyAssigned = True
+                            break
+
+                    if len(possibleVars) == 0:
+                        if not alreadyAssigned:
                             return (assignedVars, False)
-                    elif len(possible) == 1:
-                        v = possible[0]
-                        self.trail.push(v)
-                        v.assignValue(val)
-                        assignedVars[v] = val
+
+                    elif len(possibleVars) == 1:
+                        onlyVar = possibleVars[0]
+                        self.trail.push(onlyVar)
+                        onlyVar.assignValue(val)
+                        assignedVars[onlyVar] = val
                         changed = True
 
         return (assignedVars, True)
