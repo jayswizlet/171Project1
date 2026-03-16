@@ -100,7 +100,42 @@ class BTSolver:
                 The bool is true if assignment is consistent, false otherwise.
     """
     def norvigCheck ( self ):
-        return ({}, False)
+        assignedVars = {}
+
+        changed = True
+        while changed:
+            changed = False
+
+            # Heuristic 1: Elimination
+            # For every assigned variable, remove its value from unassigned neighbors
+            for var in self.network.variables:
+                if not var.isAssigned():
+                    continue
+                val = var.getAssignment()
+                for neighbor in self.network.getNeighborsOfVariable(var):
+                    if not neighbor.isAssigned() and neighbor.getDomain().contains(val):
+                        self.trail.push(neighbor)
+                        neighbor.removeValueFromDomain(val)
+                        if neighbor.getDomain().isEmpty():
+                            return (assignedVars, False)
+
+            # Heuristic 2: Only choice
+            # For each constraint, if a value can only go in one cell, assign it
+            for constraint in self.network.getConstraints():
+                for val in range(1, self.gameboard.p * self.gameboard.q + 1):
+                    possible = [v for v in constraint.vars
+                                if not v.isAssigned() and v.getDomain().contains(val)]
+                    if len(possible) == 0:
+                        if not any(v.isAssigned() and v.getAssignment() == val for v in constraint.vars):
+                            return (assignedVars, False)
+                    elif len(possible) == 1:
+                        v = possible[0]
+                        self.trail.push(v)
+                        v.assignValue(val)
+                        assignedVars[v] = val
+                        changed = True
+
+        return (assignedVars, True)
 
     """
          Optional TODO: Implement your own advanced Constraint Propagation
